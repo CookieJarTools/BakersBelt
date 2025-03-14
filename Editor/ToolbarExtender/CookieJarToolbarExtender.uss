@@ -1,0 +1,8 @@
+﻿/*Toolbar elements can't have a border, if they do they appear white*/
+*{
+    border-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}

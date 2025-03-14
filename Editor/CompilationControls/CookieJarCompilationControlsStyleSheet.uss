@@ -1,0 +1,28 @@
+﻿Image
+{
+    min-height: 22;
+    max-height: 22;
+    height: 22;
+    min-width: 22;
+    max-width: 22;
+    width: 22;
+    
+    background-color: #4f4f4f;
+}
+
+.lock{
+    border-radius: 6 0 0 6;
+    border-right-width: 1;
+    padding: 3;
+    padding-right: 1;
+    border-color: #141414;
+}
+
+.locked{
+    background-color: #fd6d3f;
+}
+
+.force{
+    border-radius: 0 6 6 0;
+    padding: 3;
+}
