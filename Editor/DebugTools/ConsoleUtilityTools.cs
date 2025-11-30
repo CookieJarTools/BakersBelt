@@ -1,17 +1,18 @@
 using System;
 using System.Reflection;
 using CookieJar.BakersBelt.Editor.ToolbarExtender;
+using CookieJarTools.BakersBelt.Editor.Utils;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace CookieJarTools.BakersBelt.Editor.ConsoleUtility
+namespace CookieJarTools.BakersBelt.Editor.DebugTools
 {
     [InitializeOnLoad]
-    public static class ConsoleUtilityToolbar
+    public static class ConsoleUtilityTools
     {
-        static ConsoleUtilityToolbar()
+        static ConsoleUtilityTools()
         {
             ToolbarExtender.AddToRightToolbar(CreateConsoleUtilityDropdown);
         }
@@ -25,6 +26,9 @@ namespace CookieJarTools.BakersBelt.Editor.ConsoleUtility
                     flexDirection = FlexDirection.Row
                 }
             };
+            
+            var styleSheet = StyleSheetUtils.LoadStyleSheet("CookieJarDebugToolsStyleSheet");
+            if (styleSheet != null) root.styleSheets.Add(styleSheet);
 
             var utilitiesMenu = new ToolbarMenu
             {
