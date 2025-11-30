@@ -7,6 +7,10 @@ Unity Toolbar extender, with a bunch of handy utils.
 - Debug Tools
   - Toggle Debug mode in Inspectors
   - Open UiToolkit Debugger
+- Console Utility
+  - Open the Console window
+  - Clear the Console
+  - Reveal the persistent data folder
  
 
 ![image](https://github.com/user-attachments/assets/aae9b0ca-52a6-413b-bf8a-22066b73001e)
