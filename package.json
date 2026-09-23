@@ -1,10 +1,23 @@
-﻿{
-  "name": "bakersbelt",
+{
+  "name": "com.cookiejartools.bakersbelt",
   "version": "1.1.2",
-  "description": "A collection of useful utils",
+  "displayName": "Bakers Belt",
+  "description": "A collection of useful utilities for Unity.",
+  "unity": "6000.0",
   "license": "MIT",
+  "author": {
+    "name": "CookieJarTools",
+    "url": "https://github.com/CookieJarTools"
+  },
+  "keywords": [
+    "utilities",
+    "tools"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/CookieJarTools/BakersBelt"
-  }
+  },
+  "documentationUrl": "https://github.com/CookieJarTools/BakersBelt#readme",
+  "changelogUrl": "https://github.com/CookieJarTools/BakersBelt/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/CookieJarTools/BakersBelt/blob/main/LICENSE.md"
 }
