@@ -1,85 +1,87 @@
-﻿using System.Reflection;
-using CookieJar.BakersBelt.Editor.ToolbarExtender;
-using CookieJarTools.BakersBelt.Editor.Utils;
+using System;
+using System.Reflection;
 using UnityEditor;
-using UnityEditor.UIElements;
+using UnityEditor.Toolbars;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace CookieJarTools.BakersBelt.Editor.DebugTools
 {
-    [InitializeOnLoad]
-    public static class DebugTools
-    {
-        static DebugTools()
-        {
-            ToolbarExtender.AddToRightToolbar(CreateUiToolkitDebugElement);
-        }
+	/// <summary>
+	/// The switches you want while something is behaving oddly: every inspector in debug mode, and
+	/// the UI Toolkit debugger, without going hunting through menus for either.
+	/// </summary>
+	public static class DebugTools
+	{
+		private const string Path = "Bakers Belt/Debug";
 
-        private static VisualElement CreateUiToolkitDebugElement()
-        {
-            var root = new VisualElement
-            {
-                style =
-                {
-                    flexDirection = FlexDirection.Row
-                }
-            };
-            
-            var styleSheet = StyleSheetUtils.LoadStyleSheet("CookieJarDebugToolsStyleSheet");
-            if (styleSheet != null) root.styleSheets.Add(styleSheet);
+		[MainToolbarElement(Path, defaultDockPosition = MainToolbarDockPosition.Right, defaultDockIndex = 12)]
+		private static MainToolbarElement Debugging()
+		{
+			var content = new MainToolbarContent(EditorGUIUtility.IconContent("d_UnityEditor.DebugInspectorWindow").image as Texture2D,
+				"Debug switches");
+			return new MainToolbarDropdown(content, Open);
+		}
 
-            var debugDropdown = new ToolbarMenu
-            {
-                text = "Debug Tools"
-            };
+		private static void Open(Rect where)
+		{
+			var menu = new GenericMenu();
+			menu.AddItem(new GUIContent("Inspectors in debug mode"), AnyInspectorDebugging(), Flip);
+			menu.AddItem(new GUIContent("UI Toolkit debugger"), false, OpenUiDebugger);
+			menu.DropDown(where);
+		}
 
-            debugDropdown.menu.AppendAction("Open UI Toolkit Debugger", action =>
-            {
-                var debuggerWindowType = System.Type.GetType("UnityEditor.UIElements.Debugger.UIElementsDebugger, UnityEditor.UIElementsModule");
-                if (debuggerWindowType != null)
-                {
-                    EditorWindow.GetWindow(debuggerWindowType);
-                }
-                else
-                {
-                    Debug.LogError("UIBuilderDebugger window type not found.");
-                }
-            });
+		/// <summary>
+		/// Puts every inspector into debug mode, or takes them all out of it. The mode is a private
+		/// field on the window, so there is no way to ask for it politely.
+		/// </summary>
+		public static void Flip()
+		{
+			var wanted = AnyInspectorDebugging() ? 0 : 1;
+			foreach (var inspector in Inspectors())
+			{
+				var field = Mode(inspector);
+				if (field == null)
+				{
+					continue;
+				}
 
-            debugDropdown.menu.AppendAction("Toggle Inspector Debug Mode", action =>
-            {
-                ToggleInspectorDebugMode();
-            });
+				field.SetValue(inspector, wanted);
+				((EditorWindow)inspector).Repaint();
+			}
+		}
 
-            root.Add(debugDropdown);
-            return root;
-        }
+		public static void OpenUiDebugger()
+		{
+			// The menu item is the supported way in, and it works out which panel to attach to.
+			if (!EditorApplication.ExecuteMenuItem("Window/UI Toolkit/Debugger"))
+			{
+				Debug.LogWarning("Bakers Belt could not open the UI Toolkit debugger from the menu.");
+			}
+		}
 
-        /// <summary>
-        /// Toggles the Inspector's mode between Normal (0) and Debug (1).
-        /// </summary>
-        private static void ToggleInspectorDebugMode()
-        {
-            var inspectorWindowType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
-            if (inspectorWindowType == null)
-            {
-                Debug.LogError("InspectorWindow type not found.");
-                return;
-            }
+		private static bool AnyInspectorDebugging()
+		{
+			foreach (var inspector in Inspectors())
+			{
+				var field = Mode(inspector);
+				if (field != null && (int)field.GetValue(inspector) != 0)
+				{
+					return true;
+				}
+			}
 
-            var inspectors = Resources.FindObjectsOfTypeAll(inspectorWindowType);
-            foreach (var inspector in inspectors)
-            {
-                var inspectorModeField = inspectorWindowType.GetField("m_InspectorMode", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (inspectorModeField == null) continue;
-                
-                var currentMode = (int)inspectorModeField.GetValue(inspector);
-                var newMode = currentMode == 0 ? 1 : 0;
-                inspectorModeField.SetValue(inspector, newMode);
-                    
-                inspector.GetType().GetMethod("Repaint", BindingFlags.Instance | BindingFlags.Public)?.Invoke(inspector, null);
-            }
-        }
-    }
+			return false;
+		}
+
+		private static UnityEngine.Object[] Inspectors()
+		{
+			var type = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+			return type == null ? Array.Empty<UnityEngine.Object>() : Resources.FindObjectsOfTypeAll(type);
+		}
+
+		private static FieldInfo Mode(UnityEngine.Object inspector)
+		{
+			return inspector.GetType().GetField("m_InspectorMode", BindingFlags.Instance | BindingFlags.NonPublic);
+		}
+	}
 }

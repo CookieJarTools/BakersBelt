@@ -1,9 +1,9 @@
 {
   "name": "com.cookiejartools.bakersbelt",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "displayName": "Bakers Belt",
-  "description": "A collection of useful utilities for Unity.",
-  "unity": "6000.0",
+  "description": "Editor shortcuts on Unity's main toolbar, with room for your own buttons.",
+  "unity": "6000.3",
   "license": "PolyForm-Shield-1.0.0",
   "author": {
     "name": "CookieJarTools",

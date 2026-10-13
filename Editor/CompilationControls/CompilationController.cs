@@ -1,74 +1,86 @@
-﻿using CookieJar.BakersBelt.Editor.ToolbarExtender;
-using CookieJarTools.BakersBelt.Editor.Utils;
+using CookieJarTools.BakersBelt.Editor.Toolbar;
 using UnityEditor;
 using UnityEditor.Compilation;
-using UnityEngine.UIElements;
+using UnityEditor.Toolbars;
+using UnityEngine;
 
-namespace CookieJar.BakersBelt.CompilationControls
+namespace CookieJarTools.BakersBelt.Editor.CompilationControls
 {
-	[InitializeOnLoad]
+	/// <summary>
+	/// Holding compilation off while you work through a change that touches several files, and
+	/// asking for one when you are ready.
+	/// <para>
+	/// The lock is a toggle rather than a button with a picture of a padlock on it, so the toolbar
+	/// draws it pressed or not the way it draws everything else of that kind.
+	/// </para>
+	/// <para>
+	/// Whether the lock is on is remembered here rather than asked of the editor, because the
+	/// editor only counts locks and keeps no public way to read the count. The belt is the one
+	/// holding this lock, so the belt is the one that knows. The note is kept in session state,
+	/// which outlives a domain reload and is gone when the editor closes, exactly as the lock is.
+	/// </para>
+	/// </summary>
 	public static class CompilationController
 	{
-		private static Image toggleCompilationButton;
-		
-		static CompilationController()
+		private const string LockPath = "Bakers Belt/Hold compilation";
+		private const string CompilePath = "Bakers Belt/Compile now";
+		private const string Remembered = "CookieJarTools.BakersBelt.CompilationHeld";
+
+		/// <summary>Whether the belt is holding compilation off.</summary>
+		public static bool Held
 		{
-			ToolbarExtender.AddToRightToolbar(CreateCompilationControls);
+			get => SessionState.GetBool(Remembered, false);
+			private set => SessionState.SetBool(Remembered, value);
 		}
 
-		static VisualElement CreateCompilationControls()
+		[MainToolbarElement(LockPath, defaultDockPosition = MainToolbarDockPosition.Right, defaultDockIndex = 10)]
+		private static MainToolbarElement Lock()
 		{
-			var root = new VisualElement
-			{
-				style =
-				{
-					flexDirection = FlexDirection.Row
-				}
-			};
-			
-			var styleSheet = StyleSheetUtils.LoadStyleSheet("CookieJarCompilationControlsStyleSheet");
-			if (styleSheet != null) root.styleSheets.Add(styleSheet);
-
-			toggleCompilationButton = new Image
-			{
-				image = EditorGUIUtility.IconContent("LockIcon-On").image,
-				tooltip = "Toggle Compilation"
-			};
-			toggleCompilationButton.AddToClassList("lock");
-			toggleCompilationButton.RegisterCallback<ClickEvent>(_ => ToggleCompilationLock());
-			root.Add(toggleCompilationButton);
-			
-			var forceCompilationButton = new Image
-			{
-				image = EditorGUIUtility.IconContent("d_ModelImporter Icon").image,
-				tooltip = "Force Compilation"
-			};
-			forceCompilationButton.AddToClassList("force");
-			forceCompilationButton.RegisterCallback<ClickEvent>(_ => ForceRecompile());
-			root.Add(forceCompilationButton);
-
-			return root;
+			var content = new MainToolbarContent(Picture("AssemblyLock"),
+				"Hold compilation off. Unity waits until you let go, so a change across several " +
+				"files cannot reload the domain half way through it");
+			return new MainToolbarToggle(content, Held, Holding);
 		}
-		
-		public static void ToggleCompilationLock()
+
+		[MainToolbarElement(CompilePath, defaultDockPosition = MainToolbarDockPosition.Right, defaultDockIndex = 11)]
+		private static MainToolbarElement CompileNow()
 		{
-			if (!AssemblyReloadUtility.CanReloadAssemblies())
+			return new MainToolbarButton(new MainToolbarContent(Picture("d_Refresh"), "Compile now"), Compile);
+		}
+
+		/// <summary>Takes the lock, or lets it go.</summary>
+		public static void Holding(bool held)
+		{
+			if (held == Held)
 			{
-				EditorApplication.UnlockReloadAssemblies();
-				toggleCompilationButton.image = EditorGUIUtility.IconContent("LockIcon-On").image;
+				return;
+			}
+
+			if (held)
+			{
+				EditorApplication.LockReloadAssemblies();
 			}
 			else
 			{
-				EditorApplication.LockReloadAssemblies();
-				toggleCompilationButton.image = EditorGUIUtility.IconContent("LockIcon").image;
+				EditorApplication.UnlockReloadAssemblies();
 			}
-			toggleCompilationButton.ToggleInClassList("locked");
+
+			Held = held;
+			MainToolbar.Refresh(LockPath);
 		}
-		
-		public static void ForceRecompile()
+
+		/// <summary>Asks for a compile, letting the lock go first if the belt is holding one.</summary>
+		public static void Compile()
 		{
+			// Asking while the lock is on would do nothing and say nothing, which looks like a
+			// button that does not work.
+			Holding(false);
 			CompilationPipeline.RequestScriptCompilation();
-			AssetDatabase.Refresh();
+		}
+
+		private static Texture2D Picture(string named)
+		{
+			return EditorGUIUtility.IconContent(named).image as Texture2D;
 		}
 	}
 }

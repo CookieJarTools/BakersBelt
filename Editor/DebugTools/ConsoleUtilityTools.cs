@@ -1,77 +1,62 @@
 using System;
 using System.Reflection;
-using CookieJar.BakersBelt.Editor.ToolbarExtender;
-using CookieJarTools.BakersBelt.Editor.Utils;
 using UnityEditor;
-using UnityEditor.UIElements;
+using UnityEditor.Toolbars;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace CookieJarTools.BakersBelt.Editor.DebugTools
 {
-    [InitializeOnLoad]
-    public static class ConsoleUtilityTools
-    {
-        static ConsoleUtilityTools()
-        {
-            ToolbarExtender.AddToRightToolbar(CreateConsoleUtilityDropdown);
-        }
+	/// <summary>
+	/// The three things everybody does to the console, within reach: open it, empty it, and find
+	/// the folder the game actually writes to.
+	/// </summary>
+	public static class ConsoleUtilityTools
+	{
+		private const string Path = "Bakers Belt/Console";
 
-        private static VisualElement CreateConsoleUtilityDropdown()
-        {
-            var root = new VisualElement
-            {
-                style =
-                {
-                    flexDirection = FlexDirection.Row
-                }
-            };
-            
-            var styleSheet = StyleSheetUtils.LoadStyleSheet("CookieJarDebugToolsStyleSheet");
-            if (styleSheet != null) root.styleSheets.Add(styleSheet);
+		[MainToolbarElement(Path, defaultDockPosition = MainToolbarDockPosition.Right, defaultDockIndex = 13)]
+		private static MainToolbarElement Console()
+		{
+			var content = new MainToolbarContent(EditorGUIUtility.IconContent("d_UnityEditor.ConsoleWindow").image as Texture2D,
+				"Console shortcuts");
+			return new MainToolbarDropdown(content, Open);
+		}
 
-            var utilitiesMenu = new ToolbarMenu
-            {
-                text = "Console Utility",
-                tooltip = "Quick console shortcuts"
-            };
+		private static void Open(Rect where)
+		{
+			var menu = new GenericMenu();
+			menu.AddItem(new GUIContent("Open the console"), false, OpenConsole);
+			menu.AddItem(new GUIContent("Clear the console"), false, Clear);
+			menu.AddSeparator(string.Empty);
+			menu.AddItem(new GUIContent("Show the persistent data folder"), false, ShowPersistentData);
+			menu.DropDown(where);
+		}
 
-            utilitiesMenu.menu.AppendAction("Open Console Window", _ => OpenConsoleWindow());
-            utilitiesMenu.menu.AppendAction("Clear Console", _ => ClearConsole());
-            utilitiesMenu.menu.AppendAction("Reveal Persistent Data Path", _ => RevealPersistentDataPath());
+		public static void OpenConsole()
+		{
+			if (!EditorApplication.ExecuteMenuItem("Window/General/Console"))
+			{
+				Debug.LogWarning("Bakers Belt could not open the console from the menu.");
+			}
+		}
 
-            root.Add(utilitiesMenu);
-            return root;
-        }
+		/// <summary>Empties the console. Clearing it is internal, so this is the one place reflection is still needed.</summary>
+		public static void Clear()
+		{
+			var entries = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.LogEntries");
+			var clear = entries?.GetMethod("Clear", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			if (clear == null)
+			{
+				Debug.LogWarning("Bakers Belt could not find UnityEditor.LogEntries.Clear, so the console was left alone.");
+				return;
+			}
 
-        private static void OpenConsoleWindow()
-        {
-            var consoleWindowType = typeof(EditorWindow).Assembly.GetType("UnityEditor.ConsoleWindow");
-            if (consoleWindowType == null)
-            {
-                Debug.LogError("Console window type not found. Unable to open console.");
-                return;
-            }
+			clear.Invoke(null, Array.Empty<object>());
+		}
 
-            EditorWindow.GetWindow(consoleWindowType);
-        }
-
-        private static void ClearConsole()
-        {
-            var logEntriesType = Type.GetType("UnityEditor.LogEntries, UnityEditor.dll");
-            var clearMethod = logEntriesType?.GetMethod("Clear", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            if (clearMethod == null)
-            {
-                Debug.LogError("LogEntries.Clear reflection lookup failed. Unable to clear console.");
-                return;
-            }
-
-            clearMethod.Invoke(null, null);
-        }
-
-        private static void RevealPersistentDataPath()
-        {
-            EditorUtility.RevealInFinder(Application.persistentDataPath);
-        }
-    }
+		public static void ShowPersistentData()
+		{
+			EditorUtility.RevealInFinder(Application.persistentDataPath);
+		}
+	}
 }
